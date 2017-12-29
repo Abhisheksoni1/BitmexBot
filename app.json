@@ -1,0 +1,7 @@
+{
+  "name": "Start on Heroku: Python",
+  "description": "Bot Testing hedging bot",
+  "image": "heroku/python",
+  "repository": "https://github.com/Abhisheksoni1/lee_bot",
+  "keywords": ["python" ]
+}
