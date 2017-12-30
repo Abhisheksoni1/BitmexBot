@@ -11,11 +11,8 @@ class BOT_TRADE(object):
         self.side = kwargs['side']
         self.place_trade(**kwargs)
 
-
     def place_trade(self, **kwargs):
         # delete dict item obj not needed more
         kwargs.pop('obj')
 
-        status = self.api_obj.place_order(**kwargs)
-        if status:
-            print("Order Placed Successfully....")
+        return self.api_obj.place_order(**kwargs)

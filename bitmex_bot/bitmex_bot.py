@@ -313,7 +313,7 @@ class OrderManager:
 
     def place_orders(self, **kwargs):
         """Create order items for use in convergence."""
-        BOT_TRADE(**kwargs)
+        return self.exchange.place_order(**kwargs)
 
     ###
     # Position Limits
@@ -372,66 +372,48 @@ class OrderManager:
                     logger.info("-----------------------------------------")
                     self.is_trade = True
                     self.sequence = self.BUY
-                    self.profit_price = self.current_bid_price + (self.current_bid_price * settings.STOP_LOSS_FACTOR)
-                    self.stop_price = self.current_bid_price - (self.current_bid_price * settings.STOP_LOSS_FACTOR)
-                    print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
-                    if not self.initial_order:
-                        self.place_orders(side=self.BUY, orderType='Limit', quantity=self.amount,
-                                          obj=self.exchange, price=self.current_bid_price)
-                        self.initial_order = True
 
-                    # set cross margin for the trade
-                    self.exchange.set_isolate_margin()
+                    if not self.initial_order:
+                        order = self.place_orders(side=self.BUY, orderType='Market', quantity=self.amount,
+                                                  obj=self.exchange)
+                        print(order)
+                        self.initial_order = True
+                        self.profit_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
+                        self.stop_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
+                        print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
+                        self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
+                                          obj=self.exchange, price=int(self.stop_price), stopPx=int(self.stop_price) - 1.0)
+                        self.place_orders(side=self.SELL, orderType='LimitIfTouched', quantity=self.amount,
+                                          obj=self.exchange, price=int(self.profit_price), stopPx=int(self.profit_price) - 1.0)
+                        self.close_order = True
+
+                        # set cross margin for the trade
+                        self.exchange.set_isolate_margin()
 
                 elif self.macd_signal == self.DOWN:
                     logger.info("Sell Trade Signal {}".format(self.last_price))
                     logger.info("-----------------------------------------")
                     self.is_trade = True
                     self.sequence = self.SELL
-                    self.profit_price = self.current_ask_price - (self.current_ask_price * settings.STOP_LOSS_FACTOR)
-                    self.stop_price = self.current_ask_price + (self.current_ask_price * settings.STOP_LOSS_FACTOR)
-                    print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
                     # place order
                     if not self.initial_order:
-                        self.place_orders(side=self.SELL, orderType='Limit', quantity=self.amount,
-                                          obj=self.exchange, price=self.current_ask_price)
+                        order = self.place_orders(side=self.SELL, orderType='Market', quantity=self.amount,
+                                                  obj=self.exchange)
+                        print(order)
                         self.initial_order = True
-                    # set cross margin for the trade
-                    self.exchange.set_isolate_margin()
+                        self.profit_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
+                        self.stop_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
+                        print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
 
-        elif len(self.exchange.get_orders()) > 0:
-            if self.exchange.get_position() > 0:
-                if self.sequence == self.BUY:
-                    if not self.close_order:
                         self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
-                                          obj=self.exchange, price=self.stop_price, stopPx=self.stop_price - 1.0)
+                                          obj=self.exchange, price=int(self.stop_price), stopPx=int(self.stop_price) - 1.0)
                         self.place_orders(side=self.SELL, orderType='LimitIfTouched', quantity=self.amount,
-                                          obj=self.exchange, price=self.profit_price, stopPx=self.profit_price - 1.0)
+                                          obj=self.exchange, price=int(self.profit_price), stopPx=int(self.profit_price) - 1.0)
                         self.close_order = True
-                elif self.sequence == self.SELL:
-                    if not self.close_order:
-                        self.place_orders(side=self.BUY, orderType='StopLimit', quantity=self.amount,
-                                          obj=self.exchange, price=self.stop_price, stopPx=self.stop_price - 1.0)
-                        self.place_orders(side=self.BUY, orderType='LimitIfTouched', quantity=self.amount,
-                                          obj=self.exchange, price=self.profit_price, stopPx=self.profit_price - 1.0)
-                        self.close_order = True
-        elif self.exchange.get_position() > 0:
-            if self.sequence == self.BUY:
-                if not self.close_order:
-                    self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
-                                      obj=self.exchange, price=self.stop_price, stopPx=self.stop_price - 1.0)
-                    self.place_orders(side=self.SELL, orderType='LimitIfTouched', quantity=self.amount,
-                                      obj=self.exchange, price=self.profit_price, stopPx=self.profit_price - 1.0)
-                    self.close_order = True
-            elif self.sequence == self.SELL:
-                if not self.close_order:
-                    self.place_orders(side=self.BUY, orderType='StopLimit', quantity=self.amount,
-                                      obj=self.exchange, price=self.stop_price, stopPx=self.stop_price - 1.0)
-                    self.place_orders(side=self.BUY, orderType='LimitIfTouched', quantity=self.amount,
-                                      obj=self.exchange, price=self.profit_price, stopPx=self.profit_price - 1.0)
-                    self.close_order = True
+                        # set cross margin for the trade
+                        self.exchange.set_isolate_margin()
 
-        if self.close_order and (self.exchange.get_position() == 0) and len(self.exchange.get_orders()) == 0 :
+        if self.close_order and (self.exchange.get_position() == 0) and len(self.exchange.get_orders()) == 0:
             self.is_trade = False
             self.close_order = False
             self.initial_order = False
