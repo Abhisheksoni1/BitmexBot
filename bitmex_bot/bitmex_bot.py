@@ -247,7 +247,7 @@ class OrderManager:
 
     def get_initial_price_data(self):
         logger.info("Getting initial price data for calculations......")
-        data = Bitmex().get_historical_data()
+        data = Bitmex().get_historical_data(tick=settings.TICK_INTERVAL)
         for item in data:
             self.price_list.append(item['close'])
 
