@@ -389,9 +389,9 @@ class OrderManager:
                         self.stop_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
                         print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
 
-                        self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
+                        self.place_orders(side=self.BUY, orderType='StopLimit', quantity=self.amount,
                                           obj=self.exchange, price=int(self.stop_price), stopPx=int(self.stop_price) - 1.0)
-                        self.place_orders(side=self.SELL, orderType='LimitIfTouched', quantity=self.amount,
+                        self.place_orders(side=self.BUY, orderType='LimitIfTouched', quantity=self.amount,
                                           obj=self.exchange, price=int(self.profit_price), stopPx=int(self.profit_price) - 1.0)
                         self.close_order = True
                         # set cross margin for the trade
