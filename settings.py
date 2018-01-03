@@ -19,7 +19,7 @@ SYMBOL = "XBTUSD"
 POSITION = 1000
 
 # tick interval used for mcad data
-TICK_INTERVAL = '5m'
+TICK_INTERVAL = '1m'
 
 STOP_LOSS_FACTOR = 0.007
 STOP_PROFIT_FACTOR = 0.01
