@@ -400,7 +400,7 @@ class OrderManager:
                         # set cross margin for the trade
                         self.exchange.set_isolate_margin()
 
-        if self.macd_signal and self.macd_signal != self.trade_signal:
+        elif self.macd_signal and self.macd_signal != self.trade_signal:
             # TODO close all positions on market price immediately and cancel ALL open orders(including stops).
             self.exchange.close_position()
             self.exchange.cancel_all_orders()
