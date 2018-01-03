@@ -1,6 +1,9 @@
 import requests
 import json
 import settings as s
+from bitmex_bot.utils import log
+
+logger = log.setup_custom_logger('root')
 
 
 class Bitmex(object):
@@ -19,9 +22,9 @@ class Bitmex(object):
         url = self.BASE_URL + "trade/bucketed?binSize={}&partial=false&symbol={}&count={}&reverse=true". \
             format(tick, self.trade_currency, count)
         r = json.loads(requests.get(url).text)
+
         lst = []
         # configure result into suitable data type
-
         try:
             dict_key = ["open", "close", "high", "low", "timestamp"]
             for item in r:
@@ -36,7 +39,8 @@ class Bitmex(object):
             return lst[::-1]
         except KeyError as e:
             pass
-
+        except TypeError as e:
+            logger.error("Tick interval not supported")
 
 # b = Bitmex()
 # b.get_price()

@@ -277,17 +277,18 @@ class OrderManager:
         up_vote = 0
         down_vote = 0
         data = Bitmex().get_historical_data(tick=settings.TICK_INTERVAL)
-        price_list = list(map(lambda i: i['close'], data))
-        data = indicators.macd(price_list)
-        status = data[-1]
-        if status > 0:
-            up_vote += 1
-            self.macd_signal = self.UP
-        elif status < 0:
-            down_vote += 1
-            self.macd_signal = self.DOWN
-        else:
-            self.macd_signal = False
+        if data:
+            price_list = list(map(lambda i: i['close'], data))
+            data = indicators.macd(price_list)
+            status = data[-1]
+            if status > 0:
+                up_vote += 1
+                self.macd_signal = self.UP
+            elif status < 0:
+                down_vote += 1
+                self.macd_signal = self.DOWN
+            else:
+                self.macd_signal = False
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
