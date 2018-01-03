@@ -19,6 +19,7 @@ def import_path(fullpath):
     del sys.path[0]
     return module
 
+
 userSettings = import_path(os.path.join('..', 'settings'))
 symbolSettings = None
 symbol = sys.argv[1] if len(sys.argv) > 1 else None

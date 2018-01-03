@@ -1,6 +1,3 @@
-import hashlib
-import hmac
-import time
 import requests
 import json
 import settings as s

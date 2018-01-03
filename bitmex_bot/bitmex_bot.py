@@ -5,12 +5,11 @@ from time import sleep
 import sys
 from datetime import datetime
 from os.path import getmtime
-import random
 import atexit
 import signal
 from bitmex_bot import bitmex, indicators
 from bitmex_bot.settings import settings
-from bitmex_bot.utils import log, constants, errors, math
+from bitmex_bot.utils import log, constants, errors
 from bitmex_bot.bitmex_historical import Bitmex
 
 from bitmex_bot.bot_trade import BOT_TRADE
@@ -173,6 +172,9 @@ class ExchangeInterface:
             symbol = self.symbol
         return self.bitmex.ticker_data(symbol)
 
+    def close_position(self):
+        return self.bitmex.close_position()
+
     def is_open(self):
         """Check that websockets are still open."""
         return not self.bitmex.ws.exited
@@ -200,11 +202,9 @@ class ExchangeInterface:
 
     def place_order(self, **kwargs):
         """
-
         :param kwargs:
         :return:
         """
-
         if kwargs['side'] == 'buy':
             kwargs.pop('side')
             return self.bitmex.buy(**kwargs)
@@ -222,8 +222,6 @@ class OrderManager:
 
     def __init__(self):
         self.exchange = ExchangeInterface()
-        # Once exchange is created, register exit handler that will always cancel orders
-        # on any error.
         atexit.register(self.exit)
         signal.signal(signal.SIGTERM, self.exit)
         self.current_bitmex_price = 0
@@ -236,20 +234,14 @@ class OrderManager:
         self.sequence = ""
         self.last_price = 0
         # to store current prices for per bot run
-        self.price_list = []
         self.initial_order = False
         self.close_order = False
         self.amount = settings.POSITION
         self.is_trade = False
         self.stop_price = 0
         self.profit_price = 0
+        self.trade_signal = False
         logger.info("Using symbol %s." % self.exchange.symbol)
-
-    def get_initial_price_data(self):
-        logger.info("Getting initial price data for calculations......")
-        data = Bitmex().get_historical_data(tick=settings.TICK_INTERVAL)
-        for item in data:
-            self.price_list.append(item['close'])
 
     def init(self):
         if settings.DRY_RUN:
@@ -260,7 +252,6 @@ class OrderManager:
         self.instrument = self.exchange.get_instrument()
         self.starting_qty1= self.exchange.get_delta()
         self.running_qty = self.starting_qty1
-        self.get_initial_price_data()
         self.reset()
         # self.place_orders()
 
@@ -268,13 +259,11 @@ class OrderManager:
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status()
-
         if settings.DRY_RUN:
             sys.exit()
 
     def print_status(self):
         """Print the current MM status."""
-
         margin1= self.exchange.get_margin()
         self.running_qty = self.exchange.get_delta()
         self.start_XBt = margin1["marginBalance"]
@@ -287,18 +276,20 @@ class OrderManager:
         # as latest price is last one
         up_vote = 0
         down_vote = 0
-        data = indicators.macd(self.price_list)
+        data = Bitmex().get_historical_data(tick=settings.TICK_INTERVAL)
+        price_list = list(map(lambda i: i['close'], data))
+        data = indicators.macd(price_list)
         status = data[::-1]
 
-        if len(status) > 5:
-            for i in range(5):
+        if len(status) > 3:
+            for i in range(3):
                 if status[i] > 0:
                     up_vote += 1
                 elif status[i] < 0:
                     down_vote += 1
-            if up_vote == 5:
+            if up_vote == 3:
                 self.macd_signal = self.UP
-            elif down_vote == 5:
+            elif down_vote == 3:
                 self.macd_signal = self.DOWN
             else:
                 self.macd_signal = False
@@ -341,8 +332,6 @@ class OrderManager:
         # price = float(self.current_ask_price+self.current_bid_price)/2
         price = data['buy']
         # if not (price == self.price_list[-1]):
-        self.price_list.append(price)
-        self.price_list.pop(0)
         self.last_price = price
         threading.Thread(target=self.macd_check).start()
         return
@@ -376,7 +365,7 @@ class OrderManager:
                     if not self.initial_order:
                         order = self.place_orders(side=self.BUY, orderType='Market', quantity=self.amount,
                                                   obj=self.exchange)
-                        print(order)
+                        self.trade_signal = self.macd_signal
                         self.initial_order = True
                         self.profit_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
                         self.stop_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
@@ -399,7 +388,7 @@ class OrderManager:
                     if not self.initial_order:
                         order = self.place_orders(side=self.SELL, orderType='Market', quantity=self.amount,
                                                   obj=self.exchange)
-                        print(order)
+                        self.trade_signal = self.macd_signal
                         self.initial_order = True
                         self.profit_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
                         self.stop_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
@@ -412,6 +401,10 @@ class OrderManager:
                         self.close_order = True
                         # set cross margin for the trade
                         self.exchange.set_isolate_margin()
+        if self.macd_signal and self.macd_signal != self.trade_signal:
+            # TODO close all positions on market price immediately and cancel ALL open orders(including stops).
+            self.exchange.close_position()
+            self.exchange.cancel_all_orders()
 
         if self.close_order and (self.exchange.get_position() == 0) and len(self.exchange.get_orders()) == 0:
             self.is_trade = False
