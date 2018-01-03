@@ -289,6 +289,8 @@ class OrderManager:
                 self.macd_signal = self.DOWN
             else:
                 self.macd_signal = False
+        else:
+            logger.error("Tick interval not supported")
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
@@ -397,6 +399,7 @@ class OrderManager:
                         self.close_order = True
                         # set cross margin for the trade
                         self.exchange.set_isolate_margin()
+
         if self.macd_signal and self.macd_signal != self.trade_signal:
             # TODO close all positions on market price immediately and cancel ALL open orders(including stops).
             self.exchange.close_position()

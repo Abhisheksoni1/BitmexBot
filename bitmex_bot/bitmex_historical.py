@@ -1,9 +1,6 @@
 import requests
 import json
 import settings as s
-from bitmex_bot.utils import log
-
-logger = log.setup_custom_logger('root')
 
 
 class Bitmex(object):
@@ -40,7 +37,7 @@ class Bitmex(object):
         except KeyError as e:
             pass
         except TypeError as e:
-            logger.error("Tick interval not supported")
+            pass
 
 # b = Bitmex()
 # b.get_price()
