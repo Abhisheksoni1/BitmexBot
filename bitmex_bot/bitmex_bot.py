@@ -16,8 +16,8 @@ from bitmex_bot.bot_trade import BOT_TRADE
 
 # Used for reloading the bot - saves modified times of key files
 import os
-watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 
+watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 
 #
 # Helpers
@@ -78,7 +78,7 @@ class ExchangeInterface:
         for symbol in contracts:
             position = self.bitmex.position(symbol=symbol)
             instrument = self.bitmex.instrument(symbol=symbol)
-            if instrument['isQuanto'] :
+            if instrument['isQuanto']:
                 future_type = "Quanto"
             elif instrument['isInverse']:
                 future_type = "Inverse"
@@ -151,16 +151,16 @@ class ExchangeInterface:
     def get_highest_buy(self):
         buys = [o for o in self.get_orders() if o['side'] == 'Buy']
         if not len(buys):
-            return {'price': -2**32}
+            return {'price': -2 ** 32}
         highest_buy = max(buys or [], key=lambda o: o['price'])
-        return highest_buy if highest_buy else {'price': -2**32}
+        return highest_buy if highest_buy else {'price': -2 ** 32}
 
     def get_lowest_sell(self):
         sells = [o for o in self.get_orders() if o['side'] == 'Sell']
         if not len(sells):
-            return {'price': 2**32}
+            return {'price': 2 ** 32}
         lowest_sell = min(sells or [], key=lambda o: o['price'])
-        return lowest_sell if lowest_sell else {'price': 2**32}  # ought to be enough for anyone
+        return lowest_sell if lowest_sell else {'price': 2 ** 32}  # ought to be enough for anyone
 
     def get_position(self, symbol=None):
         if symbol is None:
@@ -250,10 +250,13 @@ class OrderManager:
             logger.info("Order Manager initializing, connecting to BitMEX. Live run: executing real trades.")
         self.start_time = datetime.now()
         self.instrument = self.exchange.get_instrument()
-        self.starting_qty1= self.exchange.get_delta()
+        self.starting_qty1 = self.exchange.get_delta()
         self.running_qty = self.starting_qty1
         self.reset()
-        # self.place_orders()
+        # set cross margin for the trade
+        self.exchange.set_isolate_margin()
+
+    # self.place_orders()
 
     def reset(self):
         self.exchange.cancel_all_orders()
@@ -264,7 +267,7 @@ class OrderManager:
 
     def print_status(self):
         """Print the current MM status."""
-        margin1= self.exchange.get_margin()
+        margin1 = self.exchange.get_margin()
         self.running_qty = self.exchange.get_delta()
         self.start_XBt = margin1["marginBalance"]
         logger.info("Current XBT Balance : %.6f" % XBt_to_XBT(self.start_XBt))
@@ -331,8 +334,7 @@ class OrderManager:
         price = data['buy']
         # if not (price == self.price_list[-1]):
         self.last_price = price
-        threading.Thread(target=self.macd_check).start()
-        return
+        self.macd_check()
 
     ###
     # Sanity
@@ -351,7 +353,7 @@ class OrderManager:
         logger.info("current BITMEX price is {}".format(self.last_price))
         # self.get_exchange_price()
 
-        logger.info("Current Price is {} MCAD signal {}".format(self.last_price,  self.macd_signal))
+        logger.info("Current Price is {} MCAD signal {}".format(self.last_price, self.macd_signal))
         if not self.is_trade:
             if self.macd_signal:
                 if self.macd_signal == self.UP:
@@ -361,21 +363,21 @@ class OrderManager:
                     self.sequence = self.BUY
 
                     if not self.initial_order:
-                        order = self.place_orders(side=self.BUY, orderType='Market', quantity=self.amount,
-                                                  obj=self.exchange)
+                        order = self.place_orders(side=self.BUY, orderType='Market', quantity=self.amount)
                         self.trade_signal = self.macd_signal
                         self.initial_order = True
                         self.profit_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
                         self.stop_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
-                        print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
+                        print("Order price {} \tStop Price {} \tProfit Price {} ".
+                              format(order['price'], self.stop_price, self.profit_price))
+                        sleep(settings.API_REST_INTERVAL)
                         self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
-                                          obj=self.exchange, price=int(self.stop_price), stopPx=int(self.stop_price) - 1.0)
+                                          price=int(self.stop_price), stopPx=int(self.stop_price) - 5.0)
+                        sleep(settings.API_REST_INTERVAL)
                         self.place_orders(side=self.SELL, orderType='LimitIfTouched', quantity=self.amount,
-                                          obj=self.exchange, price=int(self.profit_price), stopPx=int(self.profit_price) - 1.0)
+                                          price=int(self.profit_price), stopPx=int(self.profit_price) - 5.0)
+                        sleep(settings.API_REST_INTERVAL)
                         self.close_order = True
-
-                        # set cross margin for the trade
-                        self.exchange.set_isolate_margin()
 
                 elif self.macd_signal == self.DOWN:
                     logger.info("Sell Trade Signal {}".format(self.last_price))
@@ -384,37 +386,48 @@ class OrderManager:
                     self.sequence = self.SELL
                     # place order
                     if not self.initial_order:
-                        order = self.place_orders(side=self.SELL, orderType='Market', quantity=self.amount,
-                                                  obj=self.exchange)
+                        order = self.place_orders(side=self.SELL, orderType='Market', quantity=self.amount)
                         self.trade_signal = self.macd_signal
                         self.initial_order = True
                         self.profit_price = order['price'] - (order['price'] * settings.STOP_LOSS_FACTOR)
                         self.stop_price = order['price'] + (order['price'] * settings.STOP_LOSS_FACTOR)
-                        print("Stop Price {} \tProfit Price {} set for the buy trade".format(self.stop_price, self.profit_price))
 
+                        print("Order price {} \tStop Price {} \tProfit Price {} ".
+                              format(order['price'], self.stop_price, self.profit_price))
+                        sleep(settings.API_REST_INTERVAL)
                         self.place_orders(side=self.BUY, orderType='StopLimit', quantity=self.amount,
-                                          obj=self.exchange, price=int(self.stop_price), stopPx=int(self.stop_price) - 1.0)
+                                          price=int(self.stop_price), stopPx=int(self.stop_price) - 5.0)
+                        sleep(settings.API_REST_INTERVAL)
                         self.place_orders(side=self.BUY, orderType='LimitIfTouched', quantity=self.amount,
-                                          obj=self.exchange, price=int(self.profit_price), stopPx=int(self.profit_price) - 1.0)
+                                          price=int(self.profit_price), stopPx=int(self.profit_price) - 5.0)
+                        sleep(settings.API_REST_INTERVAL)
                         self.close_order = True
                         # set cross margin for the trade
-                        self.exchange.set_isolate_margin()
 
-        elif self.macd_signal and self.macd_signal != self.trade_signal:
-            # TODO close all positions on market price immediately and cancel ALL open orders(including stops).
-            self.exchange.close_position()
-            self.exchange.cancel_all_orders()
+        else:
+            if self.macd_signal and self.macd_signal != self.trade_signal and self.trade_signal:
+                # TODO close all positions on market price immediately and cancel ALL open orders(including stops).
+                self.exchange.close_position()
+                # sleep(settings.API_REST_INTERVAL)
+                self.exchange.cancel_all_orders()
+                self.is_trade = False
+                self.close_order = False
+                self.initial_order = False
+                self.sequence = ""
+                self.profit_price = 0
+                self.stop_price = 0
+                self.trade_signal = False
 
-        if self.close_order and (self.exchange.get_position() == 0) and len(self.exchange.get_orders()) == 0:
-            self.is_trade = False
-            self.close_order = False
-            self.initial_order = False
-            self.sequence = ""
-            self.profit_price = 0
-            self.stop_price = 0
+            elif self.close_order and self.exchange.get_position() == 0 and len(self.exchange.get_orders()) == 0:
+                self.is_trade = False
+                self.close_order = False
+                self.initial_order = False
+                self.sequence = ""
+                self.profit_price = 0
+                self.stop_price = 0
+                self.trade_signal = False
 
-
-###
+    ###
     # Running
     ###
 
@@ -460,6 +473,7 @@ class OrderManager:
     def restart(self):
         logger.info("Restarting the bitmex bot...")
         os.execv(sys.executable, [sys.executable] + sys.argv)
+
 
 #
 # Helpers

@@ -8,8 +8,8 @@ BASE_URL_TESTING = "https://testnet.bitmex.com/api/v1/"
 # The BitMEX API requires permanent API keys. Go to https://testnet.bitmex.com/api/apiKeys to fill these out.
 # for TESTING mode
 # https://www.bitmex.com/api/apiKeys for LIVE mode
-API_KEY = "KlGo0aGc_CGbZAjBI71_DCJL"
-API_SECRET = "dMb4gY37AnQGesLeeUb4xo_8TjD-yRcV0ADMQUVux8uD2lUz"
+API_KEY = "HkrGARbQaw6SAXUKskmZGgXj"
+API_SECRET = "-StPBQFePPZ7xi4cg0i3cGV0z8JOqEaehsYaGcN0Kv8o4yps"
 
 
 # Instrument to market make on BitMEX.
