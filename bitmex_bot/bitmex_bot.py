@@ -371,6 +371,7 @@ class OrderManager:
                         print("Order price {} \tStop Price {} \tProfit Price {} ".
                               format(order['price'], self.stop_price, self.profit_price))
                         sleep(settings.API_REST_INTERVAL)
+
                         self.place_orders(side=self.SELL, orderType='StopLimit', quantity=self.amount,
                                           price=int(self.stop_price), stopPx=int(self.stop_price) - 5.0)
                         sleep(settings.API_REST_INTERVAL)
@@ -417,6 +418,7 @@ class OrderManager:
                 self.profit_price = 0
                 self.stop_price = 0
                 self.trade_signal = False
+                sleep(5)
 
             elif self.close_order and self.exchange.get_position() == 0 and len(self.exchange.get_orders()) == 0:
                 self.is_trade = False
@@ -426,6 +428,21 @@ class OrderManager:
                 self.profit_price = 0
                 self.stop_price = 0
                 self.trade_signal = False
+            else:
+                data = self.exchange.get_orders()
+                if len(data) == 1:
+                    if data[0]['ordType'] == "StopLimit" and data[0]['ordStatus'] == 'New':
+                        if data[0]['triggered'] == "":
+                            self.exchange.cancel_all_orders()
+                            self.is_trade = False
+                            self.close_order = False
+                            self.initial_order = False
+                            self.sequence = ""
+                            self.profit_price = 0
+                            self.stop_price = 0
+                            self.trade_signal = False
+
+
 
     ###
     # Running
