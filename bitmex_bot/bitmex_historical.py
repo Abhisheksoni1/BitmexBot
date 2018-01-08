@@ -38,6 +38,8 @@ class Bitmex(object):
             pass
         except TypeError as e:
             pass
+        except Exception as e:
+            pass
 
 # b = Bitmex()
 # b.get_price()

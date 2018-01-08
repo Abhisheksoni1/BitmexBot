@@ -280,6 +280,7 @@ class OrderManager:
         up_vote = 0
         down_vote = 0
         data = Bitmex().get_historical_data(tick=settings.TICK_INTERVAL)
+
         if data:
             price_list = list(map(lambda i: i['close'], data))
             data = indicators.macd(price_list)
