@@ -18,7 +18,7 @@ SYMBOL = "XBTUSD"
 # order amount for bitmex in USD
 POSITION = 1000
 
-# tick interval used for mcad data
+# tick interval used for macd data
 TICK_INTERVAL = '1m'
 
 STOP_LOSS_FACTOR = 0.007
@@ -47,5 +47,3 @@ ORDERID_PREFIX = "sam_bitmex_"
 
 # If any of these files (and this file) changes, reload the bot.
 WATCHED_FILES = [join("bitmex_bot", f) for f in ["bitmex_bot.py", "bitmex_historical.py", __file__]]
-
-

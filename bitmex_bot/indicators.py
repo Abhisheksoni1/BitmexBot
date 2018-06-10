@@ -21,9 +21,9 @@ def macd(l):
 
         signal_line = ema(macd_value, 9)
 
-        mcad_hist = macd_value - signal_line
+        macd_hist = macd_value - signal_line
 
-        return mcad_hist
+        return macd_hist
 
     return
 

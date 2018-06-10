@@ -354,7 +354,7 @@ class OrderManager:
         logger.info("current BITMEX price is {}".format(self.last_price))
         # self.get_exchange_price()
 
-        logger.info("Current Price is {} MCAD signal {}".format(self.last_price, self.macd_signal))
+        logger.info("Current Price is {} MACD signal {}".format(self.last_price, self.macd_signal))
         if not self.is_trade:
             if self.macd_signal:
                 if self.macd_signal == self.UP:
